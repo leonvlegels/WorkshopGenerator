@@ -1,0 +1,370 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SourceType {
+  official_doc
+  standards_body
+  educator
+  publisher
+  forum
+  internal_doc
+}
+
+enum SourceQualityTier {
+  A
+  B
+  C
+  D
+}
+
+enum ClaimStrength {
+  consensus
+  strong_heuristic
+  provisional
+}
+
+enum EvidenceStatus {
+  supported
+  mixed
+  disputed
+  under_review
+}
+
+enum ConsensusScope {
+  broad
+  moderate
+  narrow
+  none
+}
+
+enum SupportType {
+  direct_support
+  indirect_support
+  contradiction
+  context_only
+}
+
+enum CanonicalStatus {
+  canonical
+  draft
+  deprecated
+}
+
+enum AudienceLevel {
+  beginner
+  intermediate
+  advanced
+  professional
+}
+
+enum ModuleType {
+  concept
+  demonstration
+  exercise
+  discussion
+  recap
+  optional_tangent
+  troubleshooting
+  pacing_buffer
+}
+
+enum WorkshopPhase {
+  slide_heavy
+  hands_on
+  recap
+}
+
+enum RecordStatus {
+  canonical
+  draft
+  archived
+}
+
+enum ReviewOutcome {
+  approve
+  approve_with_edits
+  reject
+}
+
+enum ArtifactType {
+  workshop_structure
+  manual
+  slide
+}
+
+enum ScopeType {
+  global
+  topic
+  module
+  workshop_template
+  artifact_type
+}
+
+enum ExpansionStatus {
+  queued
+  researching
+  awaiting_review
+  approved_for_ingest
+  rejected
+  completed
+}
+
+model Source {
+  id                  String   @id @default(cuid())
+  title               String
+  sourceType          SourceType
+  authorOrOrg         String?
+  publicationDate     DateTime?
+  accessDate          DateTime?
+  citationText        String?
+  urlOrLocalRef       String?
+  sourceQualityTier   SourceQualityTier
+  notes               String?
+  claimSources        ClaimSource[]
+  createdAt           DateTime @default(now())
+}
+
+model Topic {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  displayName        String
+  brewMethod         String
+  equipmentContext   String
+  parentTopicId      String?
+  parentTopic        Topic?   @relation("TopicTree", fields: [parentTopicId], references: [id])
+  children           Topic[]  @relation("TopicTree")
+  summary            String?
+  canonicalStatus    CanonicalStatus
+  claims             Claim[]
+  canonicalEntries   CanonicalEntry[]
+  teachingViews      TeachingView[]
+  moduleTemplates    ModuleTemplate[]
+  createdAt          DateTime @default(now())
+}
+
+model Claim {
+  id               String   @id @default(cuid())
+  topicId          String
+  topic            Topic    @relation(fields: [topicId], references: [id])
+  text             String
+  claimStrength    ClaimStrength
+  evidenceStatus   EvidenceStatus
+  consensusScope   ConsensusScope
+  notes            String?
+  claimSources     ClaimSource[]
+  createdAt        DateTime @default(now())
+}
+
+model ClaimSource {
+  id             String      @id @default(cuid())
+  claimId        String
+  sourceId       String
+  claim          Claim       @relation(fields: [claimId], references: [id])
+  source         Source      @relation(fields: [sourceId], references: [id])
+  supportType    SupportType
+  excerptOrNote  String?
+}
+
+model CanonicalEntry {
+  id                     String   @id @default(cuid())
+  topicId                String
+  topic                  Topic    @relation(fields: [topicId], references: [id])
+  canonicalText          String
+  levelBaseline          AudienceLevel @default(intermediate)
+  ambiguityNotes         String
+  allowedSimplifications String
+  commonMisconceptions   String
+  tradeoffSummary        String
+  operatorNotes          String?
+  version                Int      @default(1)
+  approvedAt             DateTime?
+  createdAt              DateTime @default(now())
+}
+
+model TeachingView {
+  id                      String        @id @default(cuid())
+  topicId                 String
+  topic                   Topic         @relation(fields: [topicId], references: [id])
+  audienceLevel           AudienceLevel
+  summaryText             String
+  mustIncludePoints       String
+  optionalDepthPoints     String
+  avoidOverstatementPoints String
+  tradeoffTable           String
+  examplePhrasings        String
+}
+
+model ModuleTemplate {
+  id                   String       @id @default(cuid())
+  topicId              String
+  topic                Topic        @relation(fields: [topicId], references: [id])
+  moduleType           ModuleType
+  title                String
+  objective            String
+  canonicalCoreRef     String?
+  defaultSequenceOrder Int
+  minTimeMin           Int
+  idealTimeMin         Int
+  expandableTimeMin    Int
+  cutPriority          Int
+  prerequisites        String
+  suitableLevels       String
+  workshopPhase        WorkshopPhase
+  mustCoverPoints      String
+  optionalPoints       String
+  ifRunningLate        String
+  ifExtraTime          String
+  practicalComponent   String?
+  slideNeeds           String?
+  visualNeeds          String?
+  recapPrompt          String?
+  qnaHooks             String?
+  status               RecordStatus
+  workshopTemplateLinks WorkshopTemplateModule[]
+}
+
+model WorkshopTemplate {
+  id                    String       @id @default(cuid())
+  slug                  String       @unique
+  title                 String
+  description           String
+  defaultDurationMin    Int
+  intendedAudienceRange String
+  moduleSequence        String
+  mandatoryModules      String
+  optionalModules       String
+  pacingNotes           String
+  status                RecordStatus
+  moduleLinks           WorkshopTemplateModule[]
+  workshopStructures    WorkshopStructure[]
+}
+
+model WorkshopTemplateModule {
+  id                 String   @id @default(cuid())
+  workshopTemplateId String
+  moduleTemplateId   String
+  sequenceOrder      Int
+  isMandatory        Boolean  @default(false)
+  workshopTemplate   WorkshopTemplate @relation(fields: [workshopTemplateId], references: [id])
+  moduleTemplate     ModuleTemplate @relation(fields: [moduleTemplateId], references: [id])
+
+  @@unique([workshopTemplateId, moduleTemplateId])
+}
+
+model WorkshopStructure {
+  id                    String   @id @default(cuid())
+  workshopTemplateId    String?
+  workshopTemplate      WorkshopTemplate? @relation(fields: [workshopTemplateId], references: [id])
+  title                 String
+  operatorContextJson   String
+  generatedSequenceJson String
+  totalDurationMin      Int
+  reviewState           String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  manualArtifacts       ManualArtifact[]
+  slideArtifacts        SlideArtifact[]
+}
+
+model ManualArtifact {
+  id                  String   @id @default(cuid())
+  workshopStructureId String
+  workshopStructure   WorkshopStructure @relation(fields: [workshopStructureId], references: [id])
+  markdownBody        String
+  docxPath            String?
+  generationNotes     String?
+  assumptionLog       String
+  status              String
+  createdAt           DateTime @default(now())
+}
+
+model SlideArtifact {
+  id                  String   @id @default(cuid())
+  workshopStructureId String
+  workshopStructure   WorkshopStructure @relation(fields: [workshopStructureId], references: [id])
+  slideJson           String
+  previewMarkdown     String
+  assumptionLog       String
+  status              String
+  createdAt           DateTime @default(now())
+}
+
+model ReviewEvent {
+  id               String      @id @default(cuid())
+  artifactType     ArtifactType
+  artifactId       String
+  outcome          ReviewOutcome
+  accuracyScore    Int
+  depthScore       Int
+  usefulnessScore  Int
+  operatorNotes    String?
+  editedVersionRef String?
+  exemplarFlag     Boolean     @default(false)
+  createdAt        DateTime    @default(now())
+}
+
+model FeedbackNote {
+  id          String    @id @default(cuid())
+  scopeType   ScopeType
+  scopeRefId  String?
+  noteText    String
+  priority    Int
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
+
+model ExpansionRequest {
+  id                    String          @id @default(cuid())
+  requestedTopicText    String
+  requestedBy           String
+  contextNotes          String?
+  status                ExpansionStatus
+  operatorDecisionNotes String?
+  createdAt             DateTime        @default(now())
+  researchBriefs        ResearchBrief[]
+  draftEntries          DraftKnowledgeEntry[]
+  provisionalModules    ProvisionalModule[]
+}
+
+model ResearchBrief {
+  id                 String          @id @default(cuid())
+  expansionRequestId String
+  expansionRequest   ExpansionRequest @relation(fields: [expansionRequestId], references: [id])
+  scopeText          String
+  proposedQuestions  String
+  proposedSourceTypes String
+  riskNotes          String
+  status             String
+}
+
+model DraftKnowledgeEntry {
+  id                  String          @id @default(cuid())
+  expansionRequestId  String
+  expansionRequest    ExpansionRequest @relation(fields: [expansionRequestId], references: [id])
+  topicSlugProposal   String
+  synthesizedText     String
+  assumptions         String
+  unresolvedQuestions String
+  sourceMapJson       String
+  qualitySummary      String
+  status              String
+  provisionalModules  ProvisionalModule[]
+}
+
+model ProvisionalModule {
+  id                    String            @id @default(cuid())
+  expansionRequestId    String
+  draftKnowledgeEntryId String
+  expansionRequest      ExpansionRequest  @relation(fields: [expansionRequestId], references: [id])
+  draftKnowledgeEntry   DraftKnowledgeEntry @relation(fields: [draftKnowledgeEntryId], references: [id])
+  audienceLevel         AudienceLevel
+  modulePayloadJson     String
+  warningLabel          String
+  status                String
+}
