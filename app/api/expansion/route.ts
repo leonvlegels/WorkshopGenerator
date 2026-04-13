@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
     data: {
       expansion_request_id: reqEntry.id,
       scope_text: parsed.data.requestedTopicText,
-      proposed_questions: JSON.stringify([
+      proposed_questions: [
         'What claims are consensus vs provisional?',
         'Which variables are method-specific versus broadly transferable?'
-      ]),
-      proposed_source_types: JSON.stringify(['official_doc', 'standards_body', 'educator']),
+      ],
+      proposed_source_types: ['official_doc', 'standards_body', 'educator'],
       risk_notes: 'Mark non-consensus claims and request operator review before ingest.',
       status: 'draft'
     }

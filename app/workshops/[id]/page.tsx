@@ -9,7 +9,7 @@ export default async function WorkshopDetail({ params }: { params: { id: string 
 
   if (!workshop) return notFound();
 
-  const sequence = JSON.parse(workshop.generated_sequence_json) as {
+  const sequence = workshop.generated_sequence_json as {
     modules: Array<{ module_title: string; planned_time_min: number; module_type: string }>;
     cut_order: string[];
   };
@@ -29,8 +29,16 @@ export default async function WorkshopDetail({ params }: { params: { id: string 
       </ol>
       <h2>Manual artifact</h2>
       <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12 }}>{workshop.manuals[0]?.markdown_body}</pre>
+      {workshop.manuals[0] && (
+        <p>
+          <a href={`/api/manuals/${workshop.manuals[0].id}/docx`}>Download DOCX</a>
+        </p>
+      )}
       <h2>Slides preview</h2>
       <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 12 }}>{workshop.slides[0]?.preview_markdown}</pre>
+      <p>
+        <a href={`/api/workshops/${workshop.id}/export`}>Export workshop JSON</a>
+      </p>
       <h2>Review action</h2>
       <form action="/api/review" method="post" style={{ display: 'grid', gap: 8, maxWidth: 420 }}>
         <input type="hidden" name="artifactType" value="workshop_structure" />

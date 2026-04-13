@@ -1,4 +1,18 @@
-import { PrismaClient, AudienceLevel, CanonicalStatus, ModuleStatus, ModuleType, SourceQualityTier, SourceType, ClaimStrength, EvidenceStatus, ConsensusScope, SupportType, ExpansionStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  AudienceLevel,
+  CanonicalStatus,
+  ModuleStatus,
+  ModuleType,
+  SourceQualityTier,
+  SourceType,
+  ClaimStrength,
+  EvidenceStatus,
+  ConsensusScope,
+  SupportType,
+  ExpansionStatus,
+  WorkshopPhase
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -50,12 +64,12 @@ async function main() {
       topic_id: topic.id,
       canonical_text:
         'Grind size changes flow resistance, contact conditions, extraction rate, and sensory profile. Particle size distribution and puck prep can dominate outcomes.',
-      ambiguity_notes: JSON.stringify([
+      ambiguity_notes: [
         'Distribution and fines can matter as much as average size.',
         'Different grinders produce different distributions at similar settings.'
-      ]),
-      allowed_simplifications: JSON.stringify(['Finer generally increases resistance.', 'Interpret flow and taste together.']),
-      common_misconceptions: JSON.stringify(['Finer is always better.', 'Time alone diagnoses extraction quality.']),
+      ],
+      allowed_simplifications: ['Finer generally increases resistance.', 'Interpret flow and taste together.'],
+      common_misconceptions: ['Finer is always better.', 'Time alone diagnoses extraction quality.'],
       tradeoff_summary:
         'Finer can raise extraction and intensity but increase channel risk; coarser can improve flow and clarity but risk thinness.',
       version: 1,
@@ -69,10 +83,10 @@ async function main() {
       topic_id: topic.id,
       audience_level: AudienceLevel.beginner,
       summary_text: 'Use grind as one major lever, then verify with taste and flow together.',
-      must_include_points: JSON.stringify(['Grind affects flow and extraction.', 'No single best grind in all contexts.']),
-      optional_depth_points: JSON.stringify(['Grinder-dependent particle distribution.']),
-      avoid_overstatement_points: JSON.stringify(['Do not promise fixed brew time targets.']),
-      tradeoff_table: JSON.stringify({
+      must_include_points: ['Grind affects flow and extraction.', 'No single best grind in all contexts.'],
+      optional_depth_points: ['Grinder-dependent particle distribution.'],
+      avoid_overstatement_points: ['Do not promise fixed brew time targets.'],
+      tradeoff_table: {
         question: 'How should we adjust espresso shot performance?',
         approach_a_name: 'Ratio-first',
         approach_a_best_for: 'Stable sensory targets',
@@ -82,8 +96,8 @@ async function main() {
         approach_b_risks: 'Can hide recipe mismatch.',
         what_is_consensus: 'Taste and extraction indicators should be combined.',
         what_depends: 'Coffee age, roast level, and grinder behavior.'
-      }),
-      example_phrasings: JSON.stringify(['Finer or coarser is not moral; it is contextual.'])
+      },
+      example_phrasings: ['Finer or coarser is not moral; it is contextual.']
     }
   });
 
@@ -99,18 +113,18 @@ async function main() {
       ideal_time_min: 10,
       expandable_time_min: 14,
       cut_priority: 2,
-      prerequisites: JSON.stringify([]),
-      suitable_levels: JSON.stringify(['beginner', 'intermediate', 'advanced', 'professional']),
-      must_cover_points: JSON.stringify(['Finer/coarser is contextual.', 'Taste and flow interpreted together.']),
-      optional_points: JSON.stringify(['Particle distribution nuance.']),
-      if_running_late: JSON.stringify(['Skip grinder-design tangent.']),
-      if_extra_time: JSON.stringify(['Compare two coffees with same target ratio.']),
+      prerequisites: [],
+      suitable_levels: ['beginner', 'intermediate', 'advanced', 'professional'],
+      must_cover_points: ['Finer/coarser is contextual.', 'Taste and flow interpreted together.'],
+      optional_points: ['Particle distribution nuance.'],
+      if_running_late: ['Skip grinder-design tangent.'],
+      if_extra_time: ['Compare two coffees with same target ratio.'],
       practical_component: 'Dial-in comparison exercise.',
       slide_needs: 'Flow chart and extraction spectrum slide.',
       visual_needs: 'Particle distribution diagram.',
       recap_prompt: 'What signal told you to move finer/coarser?',
       qna_hooks: 'When does bitterness come from channeling versus over-extraction?',
-      workshop_phase: 'slide-heavy',
+      workshop_phase: WorkshopPhase.slide_heavy,
       status: ModuleStatus.canonical
     }
   });
@@ -122,9 +136,9 @@ async function main() {
       description: 'Slide-heavy first hour, hands-on second hour.',
       default_duration_min: 120,
       intended_audience_range: 'beginner-intermediate',
-      module_sequence: JSON.stringify([module.id]),
-      mandatory_modules: JSON.stringify([module.id]),
-      optional_modules: JSON.stringify([]),
+      module_sequence: [module.id],
+      mandatory_modules: [module.id],
+      optional_modules: [],
       pacing_notes: 'Reserve 10 min Q&A and troubleshooting.',
       status: 'canonical'
     }

@@ -22,6 +22,9 @@ npm run dev
 - Assumption logging persisted on each artifact.
 - Review event capture with outcome and scoring.
 - Expansion request endpoint that creates a research brief.
+- Curriculum editor page for topics/canonical entries/modules.
+- JSON export endpoint for generated workshop structures.
+- DOCX export endpoint for manual artifacts.
 
 ## Notes
 - This scaffold is intentionally conservative and retrieval-first.

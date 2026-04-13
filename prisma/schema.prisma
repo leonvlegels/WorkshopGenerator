@@ -80,6 +80,18 @@ enum ModuleStatus {
   archived
 }
 
+enum WorkshopPhase {
+  slide_heavy
+  hands_on
+  recap
+}
+
+enum ArtifactStatus {
+  draft
+  reviewed
+  archived
+}
+
 enum ReviewOutcome {
   approve
   approve_with_edits
@@ -161,9 +173,9 @@ model CanonicalEntry {
   topic_id              String
   canonical_text        String
   level_baseline        AudienceLevel?
-  ambiguity_notes       String
-  allowed_simplifications String
-  common_misconceptions String
+  ambiguity_notes       Json
+  allowed_simplifications Json
+  common_misconceptions Json
   tradeoff_summary      String
   operator_notes        String?
   version               Int      @default(1)
@@ -176,11 +188,11 @@ model TeachingView {
   topic_id                  String
   audience_level            AudienceLevel
   summary_text              String
-  must_include_points       String
-  optional_depth_points     String
-  avoid_overstatement_points String
-  tradeoff_table            String
-  example_phrasings         String
+  must_include_points       Json
+  optional_depth_points     Json
+  avoid_overstatement_points Json
+  tradeoff_table            Json
+  example_phrasings         Json
   topic                     Topic        @relation(fields: [topic_id], references: [id])
 }
 
@@ -196,18 +208,18 @@ model ModuleTemplate {
   ideal_time_min         Int
   expandable_time_min    Int
   cut_priority           Int
-  prerequisites          String
-  suitable_levels        String
-  must_cover_points      String
-  optional_points        String
-  if_running_late        String
-  if_extra_time          String
+  prerequisites          Json
+  suitable_levels        Json
+  must_cover_points      Json
+  optional_points        Json
+  if_running_late        Json
+  if_extra_time          Json
   practical_component    String
   slide_needs            String
   visual_needs           String
   recap_prompt           String
   qna_hooks              String
-  workshop_phase         String @default("slide-heavy")
+  workshop_phase         WorkshopPhase @default(slide_heavy)
   status                 ModuleStatus
   topic                  Topic @relation(fields: [topic_id], references: [id])
 }
@@ -219,9 +231,9 @@ model WorkshopTemplate {
   description             String
   default_duration_min    Int
   intended_audience_range String
-  module_sequence         String
-  mandatory_modules       String
-  optional_modules        String
+  module_sequence         Json
+  mandatory_modules       Json
+  optional_modules        Json
   pacing_notes            String
   status                  String
   structures              WorkshopStructure[]
@@ -231,8 +243,8 @@ model WorkshopStructure {
   id                      String   @id @default(cuid())
   workshop_template_id    String
   title                   String
-  operator_context_json   String
-  generated_sequence_json String
+  operator_context_json   Json
+  generated_sequence_json Json
   total_duration_min      Int
   review_state            String
   created_at              DateTime @default(now())
@@ -248,18 +260,18 @@ model ManualArtifact {
   markdown_body       String
   docx_path           String?
   generation_notes    String
-  assumption_log      String
-  status              String
+  assumption_log      Json
+  status              ArtifactStatus
   workshopStructure   WorkshopStructure @relation(fields: [workshop_structure_id], references: [id])
 }
 
 model SlideArtifact {
   id                  String   @id @default(cuid())
   workshop_structure_id String
-  slide_json          String
+  slide_json          Json
   preview_markdown    String
-  assumption_log      String
-  status              String
+  assumption_log      Json
+  status              ArtifactStatus
   workshopStructure   WorkshopStructure @relation(fields: [workshop_structure_id], references: [id])
 }
 
@@ -303,8 +315,8 @@ model ResearchBrief {
   id                    String @id @default(cuid())
   expansion_request_id  String
   scope_text            String
-  proposed_questions    String
-  proposed_source_types String
+  proposed_questions    Json
+  proposed_source_types Json
   risk_notes            String
   status                String
   expansionRequest      ExpansionRequest @relation(fields: [expansion_request_id], references: [id])
@@ -315,9 +327,9 @@ model DraftKnowledgeEntry {
   expansion_request_id  String
   topic_slug_proposal   String
   synthesized_text      String
-  assumptions           String
-  unresolved_questions  String
-  source_map_json       String
+  assumptions           Json
+  unresolved_questions  Json
+  source_map_json       Json
   quality_summary       String
   status                String
   expansionRequest      ExpansionRequest @relation(fields: [expansion_request_id], references: [id])
@@ -329,7 +341,7 @@ model ProvisionalModule {
   expansion_request_id     String
   draft_knowledge_entry_id String
   audience_level           AudienceLevel
-  module_payload_json      String
+  module_payload_json      Json
   warning_label            String
   status                   String
   expansionRequest         ExpansionRequest @relation(fields: [expansion_request_id], references: [id])

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ArtifactStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
@@ -34,6 +35,23 @@ export async function POST(req: NextRequest) {
       exemplar_flag: input.outcome === 'approve'
     }
   });
+
+  if (input.artifactType === 'workshop_structure') {
+    await prisma.workshopStructure.update({
+      where: { id: input.artifactId },
+      data: { review_state: input.outcome }
+    });
+
+    await prisma.manualArtifact.updateMany({
+      where: { workshop_structure_id: input.artifactId, status: ArtifactStatus.draft },
+      data: { status: ArtifactStatus.reviewed }
+    });
+
+    await prisma.slideArtifact.updateMany({
+      where: { workshop_structure_id: input.artifactId, status: ArtifactStatus.draft },
+      data: { status: ArtifactStatus.reviewed }
+    });
+  }
 
   return NextResponse.redirect(new URL('/', req.url));
 }

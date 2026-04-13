@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { ArtifactStatus, WorkshopPhase } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { buildAssumptionLog, buildManualMarkdown, buildWorkshopSequence } from '@/lib/generation';
 
@@ -44,13 +45,13 @@ export async function POST(req: NextRequest) {
       title: input.title,
       total_duration_min: input.totalDurationMin,
       review_state: 'pending',
-      operator_context_json: JSON.stringify({
+      operator_context_json: {
         groupSize: input.groupSize,
         teachers: input.teachers,
         equipmentContext: input.equipmentContext,
         audienceLevel: input.audienceLevel
-      }),
-      generated_sequence_json: JSON.stringify(sequence)
+      },
+      generated_sequence_json: sequence
     }
   });
 
@@ -61,23 +62,33 @@ export async function POST(req: NextRequest) {
       workshop_structure_id: structure.id,
       markdown_body: manual,
       generation_notes: 'Generated from canonical entries + teaching views + active feedback notes.',
-      assumption_log: JSON.stringify(assumptionLog),
-      status: 'draft'
+      assumption_log: assumptionLog,
+      status: ArtifactStatus.draft
     }
   });
 
   await prisma.slideArtifact.create({
     data: {
       workshop_structure_id: structure.id,
-      slide_json: JSON.stringify({
+      slide_json: {
         title: input.title,
-        sections: sequence.modules.map((m) => ({ heading: m.module_title, type: m.module_type, phase: m.workshop_phase }))
-      }),
+        sections: sequence.modules.map((m) => ({
+          heading: m.module_title,
+          type: m.module_type,
+          phase: humanizePhase(m.workshop_phase as WorkshopPhase)
+        }))
+      },
       preview_markdown: `# ${input.title}\n\n- Warm, technical, encouraging tone\n- First hour slide-heavy, second hour practical\n- Include recap and final Q&A`,
-      assumption_log: JSON.stringify(assumptionLog),
-      status: 'draft'
+      assumption_log: assumptionLog,
+      status: ArtifactStatus.draft
     }
   });
 
   return NextResponse.redirect(new URL(`/workshops/${structure.id}`, req.url));
+}
+
+function humanizePhase(phase: WorkshopPhase) {
+  if (phase === WorkshopPhase.slide_heavy) return 'slide-heavy';
+  if (phase === WorkshopPhase.hands_on) return 'hands-on';
+  return 'recap';
 }
