@@ -10,7 +10,8 @@ export default async function HomePage() {
       <h1>Coffee Habits Workshop System</h1>
       <p>Local-first curriculum editor and workshop generator.</p>
       <p>
-        <Link href="/workshops/new">Create workshop from template</Link> · <Link href="/curriculum">Curriculum editor</Link>
+        <Link href="/workshops/new">Create workshop from template</Link> · <Link href="/curriculum">Curriculum editor</Link> ·{' '}
+        <Link href="/expansion">Expansion workflow</Link>
       </p>
       <h2>Templates</h2>
       <ul>

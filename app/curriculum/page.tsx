@@ -1,43 +1,34 @@
 import { prisma } from '@/lib/prisma';
+import CurriculumEditorClient from '@/components/CurriculumEditorClient';
 
 export default async function CurriculumPage() {
-  const [topics, modules, entries] = await Promise.all([
-    prisma.topic.findMany({ orderBy: { slug: 'asc' } }),
-    prisma.moduleTemplate.findMany({ orderBy: { default_sequence_order: 'asc' }, include: { topic: true } }),
-    prisma.canonicalEntry.findMany({ orderBy: { approved_at: 'desc' }, include: { topic: true } })
+  const [topics, claims, sources, canonicalEntries, teachingViews, moduleTemplates, workshopTemplates, feedbackNotes] = await Promise.all([
+    prisma.topic.findMany({ orderBy: { slug: 'asc' }, take: 50 }),
+    prisma.claim.findMany({ orderBy: { id: 'desc' }, take: 50 }),
+    prisma.source.findMany({ orderBy: { id: 'desc' }, take: 50 }),
+    prisma.canonicalEntry.findMany({ orderBy: { id: 'desc' }, take: 50 }),
+    prisma.teachingView.findMany({ orderBy: { id: 'desc' }, take: 50 }),
+    prisma.moduleTemplate.findMany({ orderBy: { default_sequence_order: 'asc' }, take: 50 }),
+    prisma.workshopTemplate.findMany({ orderBy: { title: 'asc' }, take: 50 }),
+    prisma.feedbackNote.findMany({ orderBy: { priority: 'asc' }, take: 50 })
   ]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
-      <h1>Curriculum Editor</h1>
-      <p>Review and maintain topics, canonical entries, and module templates.</p>
-
-      <h2>Topics</h2>
-      <ul>
-        {topics.map((topic) => (
-          <li key={topic.id}>
-            <strong>{topic.display_name}</strong> ({topic.slug}) — {topic.brew_method}/{topic.equipment_context}
-          </li>
-        ))}
-      </ul>
-
-      <h2>Canonical entries</h2>
-      <ul>
-        {entries.map((entry) => (
-          <li key={entry.id}>
-            <strong>{entry.topic.display_name}</strong> v{entry.version} {entry.approved_at ? '✅ approved' : '⚠️ draft'}
-          </li>
-        ))}
-      </ul>
-
-      <h2>Module templates</h2>
-      <ul>
-        {modules.map((module) => (
-          <li key={module.id}>
-            {module.default_sequence_order}. {module.title} ({module.module_type}) — {module.topic.display_name}
-          </li>
-        ))}
-      </ul>
+    <main style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+      <h1>Curriculum Editor (CRUD)</h1>
+      <p>Simple functional CRUD editor for canonical curriculum data. Edit inline, create via JSON templates, delete rows.</p>
+      <CurriculumEditorClient
+        topics={topics as any}
+        claims={claims as any}
+        sources={sources as any}
+        canonicalEntries={canonicalEntries as any}
+        teachingViews={teachingViews as any}
+        moduleTemplates={moduleTemplates as any}
+        workshopTemplates={workshopTemplates as any}
+        feedbackNotes={feedbackNotes as any}
+        firstTopicId={topics[0]?.id ?? ''}
+        firstSourceId={sources[0]?.id ?? ''}
+      />
     </main>
   );
 }

@@ -53,5 +53,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  if (input.outcome !== 'approve') {
+    await prisma.feedbackNote.create({
+      data: {
+        scope_type: 'artifact_type',
+        scope_ref_id: input.artifactType,
+        note_text: `From review (${input.outcome}): ${input.notes}`,
+        priority: 2,
+        active: true
+      }
+    });
+  }
+
   return NextResponse.redirect(new URL('/', req.url));
 }

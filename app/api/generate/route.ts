@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AudienceLevel } from '@prisma/client';
 import { z } from 'zod';
-import { ArtifactStatus, WorkshopPhase } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { buildAssumptionLog, buildManualMarkdown, buildWorkshopSequence } from '@/lib/generation';
+import { buildAssumptionLog, buildWorkshopSequence, ModuleSelection } from '@/lib/generation';
+
+const SelectionSchema = z.array(
+  z.object({
+    moduleId: z.string(),
+    enabled: z.boolean(),
+    level: z.enum(['beginner', 'intermediate', 'advanced', 'professional']),
+    locked: z.boolean().optional(),
+    plannedTimeMin: z.number().optional()
+  })
+);
 
 const InputSchema = z.object({
   workshopTemplateId: z.string().min(1),
@@ -11,30 +21,42 @@ const InputSchema = z.object({
   groupSize: z.coerce.number().min(1),
   teachers: z.coerce.number().min(1),
   equipmentContext: z.string().min(2),
-  audienceLevel: z.enum(['beginner', 'intermediate', 'advanced', 'professional'])
+  specialGoals: z.string().optional(),
+  moduleSelections: z.string().optional()
 });
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
   const parsed = InputSchema.safeParse(Object.fromEntries(form.entries()));
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
   const input = parsed.data;
-
   const template = await prisma.workshopTemplate.findUnique({ where: { id: input.workshopTemplateId } });
   if (!template) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-  const modules = await prisma.moduleTemplate.findMany({ where: { status: 'canonical' } });
-  const views = await prisma.teachingView.findMany({ where: { audience_level: input.audienceLevel } });
-  const canonicals = await prisma.canonicalEntry.findMany({ where: { approved_at: { not: null } } });
-  const feedback = await prisma.feedbackNote.findMany({ where: { active: true }, orderBy: { priority: 'asc' } });
+  const templateModuleIds = Array.isArray(template.module_sequence) ? (template.module_sequence as string[]) : [];
+  const modules = await prisma.moduleTemplate.findMany({
+    where: {
+      id: templateModuleIds.length ? { in: templateModuleIds } : undefined,
+      status: 'canonical'
+    },
+    orderBy: { default_sequence_order: 'asc' }
+  });
 
-  const sequence = buildWorkshopSequence(modules, input.totalDurationMin);
+  const parsedSelections = input.moduleSelections ? SelectionSchema.parse(JSON.parse(input.moduleSelections)) : [];
+  const fallbackSelections: ModuleSelection[] = modules.map((m) => ({
+    moduleId: m.id,
+    enabled: true,
+    level: AudienceLevel.beginner
+  }));
+  const selections = parsedSelections.length ? parsedSelections : fallbackSelections;
+
+  const sequence = buildWorkshopSequence({ modules, selections, durationMin: input.totalDurationMin });
+
   const assumptionLog = buildAssumptionLog({
-    level: input.audienceLevel,
+    selectedCount: selections.filter((s) => s.enabled).length,
+    levelMix: selections.filter((s) => s.enabled).map((s) => s.level),
     equipment: input.equipmentContext,
     targetDurationMin: input.totalDurationMin
   });
@@ -44,51 +66,26 @@ export async function POST(req: NextRequest) {
       workshop_template_id: input.workshopTemplateId,
       title: input.title,
       total_duration_min: input.totalDurationMin,
-      review_state: 'pending',
+      review_state: 'draft',
       operator_context_json: {
         groupSize: input.groupSize,
         teachers: input.teachers,
         equipmentContext: input.equipmentContext,
-        audienceLevel: input.audienceLevel
+        specialGoals: input.specialGoals || ''
       },
       generated_sequence_json: sequence
     }
   });
 
-  const manual = buildManualMarkdown({ title: input.title, sequence, views, canonicals, feedback });
-
-  await prisma.manualArtifact.create({
+  await prisma.feedbackNote.create({
     data: {
-      workshop_structure_id: structure.id,
-      markdown_body: manual,
-      generation_notes: 'Generated from canonical entries + teaching views + active feedback notes.',
-      assumption_log: assumptionLog,
-      status: ArtifactStatus.draft
-    }
-  });
-
-  await prisma.slideArtifact.create({
-    data: {
-      workshop_structure_id: structure.id,
-      slide_json: {
-        title: input.title,
-        sections: sequence.modules.map((m) => ({
-          heading: m.module_title,
-          type: m.module_type,
-          phase: humanizePhase(m.workshop_phase as WorkshopPhase)
-        }))
-      },
-      preview_markdown: `# ${input.title}\n\n- Warm, technical, encouraging tone\n- First hour slide-heavy, second hour practical\n- Include recap and final Q&A`,
-      assumption_log: assumptionLog,
-      status: ArtifactStatus.draft
+      scope_type: 'artifact_type',
+      scope_ref_id: 'workshop_structure',
+      note_text: `Assumption log: ${assumptionLog.unresolved_ambiguities.join('; ')}`,
+      priority: 5,
+      active: true
     }
   });
 
   return NextResponse.redirect(new URL(`/workshops/${structure.id}`, req.url));
-}
-
-function humanizePhase(phase: WorkshopPhase) {
-  if (phase === WorkshopPhase.slide_heavy) return 'slide-heavy';
-  if (phase === WorkshopPhase.hands_on) return 'hands-on';
-  return 'recap';
 }
